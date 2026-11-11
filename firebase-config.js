@@ -1,12 +1,10 @@
-// Configuração do Firebase do Nitro.
-// Troque cada COLE_AQUI pelo valor que aparece no Firebase em:
-// Configurações do projeto > Geral > Seus apps > app da Web.
-// Enquanto estiver como COLE_AQUI, o Nitro funciona só neste aparelho.
+// Configuração do Firebase do Nitro (projeto nitro-e3b63).
+// Estes dados não são secretos: quem protege as informações são as regras do Firestore.
 export const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI"
+  apiKey: "AIzaSyDBX9_39nKhdLuPEFG_cvs541sfUbGEAik",
+  authDomain: "nitro-e3b63.firebaseapp.com",
+  projectId: "nitro-e3b63",
+  storageBucket: "nitro-e3b63.firebasestorage.app",
+  messagingSenderId: "51726057711",
+  appId: "1:51726057711:web:d9e41744f335b3a3325b1a"
 };
