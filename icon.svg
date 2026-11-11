@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d1d2b"/>
+      <stop offset="1" stop-color="#0b0b10"/>
+    </linearGradient>
+    <linearGradient id="hel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7d33"/>
+      <stop offset="1" stop-color="#ff4a12"/>
+    </linearGradient>
+    <linearGradient id="vis" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a3a5c"/>
+      <stop offset="1" stop-color="#0d1120"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- manchas de spray ao fundo -->
+  <circle cx="70" cy="80" r="70" fill="#c6ff00" opacity=".14"/>
+  <circle cx="450" cy="450" r="90" fill="#00e5ff" opacity=".14"/>
+  <circle cx="440" cy="70" r="34" fill="#ff5a1f" opacity=".18"/>
+  <circle cx="40" cy="300" r="5" fill="#c6ff00"/>
+  <circle cx="478" cy="250" r="7" fill="#00e5ff"/>
+  <circle cx="60" cy="420" r="8" fill="#ff5a1f"/>
+  <circle cx="470" cy="140" r="4" fill="#c6ff00"/>
+
+  <!-- antena -->
+  <line x1="266" y1="100" x2="266" y2="56" stroke="#0b0b10" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="266" cy="48" r="17" fill="#c6ff00" stroke="#0b0b10" stroke-width="9"/>
+
+  <!-- escorridos de tinta (atrás do capacete) -->
+  <path d="M160 388 v52 a11 11 0 0 0 22 0 v-52 z" fill="#c6ff00" stroke="#0b0b10" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M256 388 v30 a9 9 0 0 0 18 0 v-30 z" fill="#c6ff00" stroke="#0b0b10" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M356 388 v70 a12 12 0 0 0 24 0 v-70 z" fill="#c6ff00" stroke="#0b0b10" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- capacete -->
+  <path d="M92 306 C92 172 168 100 266 100 C364 100 430 174 430 296 L430 344 C430 378 406 400 372 400 L150 400 C114 400 92 376 92 344 Z"
+        fill="url(#hel)" stroke="#0b0b10" stroke-width="14" stroke-linejoin="round"/>
+
+  <!-- faixa de cima -->
+  <path d="M146 146 C186 112 236 102 266 102 C300 102 334 112 368 136 L346 184 C316 162 290 156 266 156 C240 156 206 166 174 192 Z"
+        fill="#c6ff00" stroke="#0b0b10" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- viseira -->
+  <path d="M118 256 C118 218 150 200 202 200 L402 200 C412 200 418 206 418 216 L418 292 C418 324 398 340 362 340 L180 340 C140 340 118 316 118 284 Z"
+        fill="url(#vis)" stroke="#0b0b10" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- brilho da viseira -->
+  <path d="M150 214 L190 214 L160 336 L132 336 Z" fill="#ffffff" opacity=".10"/>
+  <path d="M205 214 L222 214 L192 336 L175 336 Z" fill="#ffffff" opacity=".07"/>
+
+  <!-- olhos -->
+  <ellipse cx="238" cy="270" rx="36" ry="42" fill="#ffffff" stroke="#0b0b10" stroke-width="8"/>
+  <ellipse cx="338" cy="270" rx="36" ry="42" fill="#ffffff" stroke="#0b0b10" stroke-width="8"/>
+  <circle cx="252" cy="274" r="19" fill="#0b0b10"/>
+  <circle cx="352" cy="274" r="19" fill="#0b0b10"/>
+  <circle cx="259" cy="266" r="7" fill="#ffffff"/>
+  <circle cx="359" cy="266" r="7" fill="#ffffff"/>
+
+  <!-- sobrancelhas -->
+  <path d="M200 222 L262 232" stroke="#c6ff00" stroke-width="9" stroke-linecap="round"/>
+  <path d="M376 222 L314 232" stroke="#c6ff00" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- raio nitro no queixo -->
+  <path d="M282 350 L246 384 L266 384 L252 410 L300 372 L278 372 L296 350 Z"
+        fill="#c6ff00" stroke="#0b0b10" stroke-width="7" stroke-linejoin="round" transform="translate(0,-12)"/>
+
+  <!-- brilho no capacete -->
+  <path d="M120 300 C120 250 130 220 150 196" stroke="#ffffff" stroke-width="9" stroke-linecap="round" fill="none" opacity=".35"/>
+</svg>

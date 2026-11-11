@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nitro</title>
+<meta name="description" content="Nitro, o assistente pessoal: contas, casa e live.">
+<meta name="theme-color" content="#0b0b10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nitro">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#0b0b10; --card:#161621; --card2:#1d1d2b; --line:#2b2b3d;
+    --text:#f4f4f8; --mut:#9a9ab2;
+    --lime:#c6ff00; --orange:#ff5a1f; --cyan:#00e5ff; --red:#ff3b5c;
+    --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  body{min-height:100vh;padding-top:var(--safe-top);padding-bottom:calc(84px + var(--safe-bot))}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+  /* topo */
+  header{display:flex;align-items:center;gap:12px;padding:14px 0 10px}
+  header img{width:48px;height:48px;border-radius:14px;border:2px solid var(--lime);flex:none}
+  .brand{font-family:"Arial Black",Impact,Haettenschweiler,sans-serif;font-style:italic;
+    font-size:28px;letter-spacing:1px;text-transform:uppercase;line-height:1;
+    color:var(--lime);text-shadow:2px 2px 0 var(--orange)}
+  .hello{color:var(--mut);font-size:13px;margin-top:3px}
+
+  .alert{border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600;margin:6px 0 14px;
+    background:var(--card);border:1px solid var(--line)}
+  .alert.bad{border-color:var(--red);background:rgba(255,59,92,.10)}
+  .alert.warn{border-color:var(--orange);background:rgba(255,90,31,.10)}
+  .alert.ok{border-color:var(--lime);background:rgba(198,255,0,.08)}
+
+  h2{font-family:"Arial Black",Impact,sans-serif;font-style:italic;text-transform:uppercase;
+    font-size:15px;letter-spacing:.5px;margin:20px 0 10px;color:var(--text)}
+  h2 .tag{font-family:-apple-system,sans-serif;font-style:normal;font-size:10px;font-weight:700;
+    letter-spacing:.5px;color:#0b0b10;background:var(--cyan);border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+  h2 .tag.soon{background:var(--orange)}
+
+  /* cards de resumo */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 10px 12px}
+  .stat .l{font-size:11px;color:var(--mut);line-height:1.2;min-height:26px}
+  .stat .n{font-size:20px;font-weight:800;margin-top:4px}
+  .stat .s{font-size:11px;color:var(--mut);margin-top:2px}
+  .stat.red .n{color:var(--red)} .stat.lime .n{color:var(--lime)} .stat.or .n{color:var(--orange)}
+
+  /* formulários */
+  input,select,button,textarea{font:inherit;color:inherit}
+  input[type=text],input[type=date],input[type=search],select,textarea{
+    width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;
+    padding:12px;font-size:16px;color:var(--text);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--lime)}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .row>.fit{flex:none}
+  button{border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;font-size:15px}
+  .btn{background:var(--lime);color:#0b0b10}
+  .btn:active{transform:scale(.97)}
+  .btn.alt{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .btn.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+  .btn.sm{padding:8px 12px;font-size:13px;border-radius:10px}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .hint{color:var(--mut);font-size:12px;margin:6px 2px 0}
+
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin:14px 0 10px}
+  .seg button{flex:1;background:transparent;color:var(--mut);padding:9px 6px;font-size:14px}
+  .seg button.on{background:var(--lime);color:#0b0b10}
+
+  /* lista de contas */
+  .bill{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);
+    border-radius:14px;padding:12px;margin-bottom:10px}
+  .bill.over{border-left-color:var(--red)} .bill.today{border-left-color:var(--orange)}
+  .bill.soon{border-left-color:var(--lime)} .bill.paid{border-left-color:var(--cyan);opacity:.75}
+  .bill .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .bill .nm{font-weight:700;font-size:16px;word-break:break-word}
+  .bill .meta{color:var(--mut);font-size:12px;margin-top:3px}
+  .bill .val{font-weight:800;font-size:17px;white-space:nowrap}
+  .chip{display:inline-block;font-size:11px;font-weight:700;border-radius:8px;padding:3px 8px;margin-top:8px;
+    background:var(--card2);color:var(--mut)}
+  .chip.over{background:rgba(255,59,92,.18);color:var(--red)}
+  .chip.today{background:rgba(255,90,31,.18);color:var(--orange)}
+  .chip.soon{background:rgba(198,255,0,.14);color:var(--lime)}
+  .chip.paid{background:rgba(0,229,255,.14);color:var(--cyan)}
+  .bill .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .empty{text-align:center;color:var(--mut);padding:26px 10px;font-size:14px;border:1px dashed var(--line);border-radius:14px}
+
+  /* casa / live */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+  .light{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+  .light:last-child{border-bottom:0}
+  .sw{width:46px;height:26px;border-radius:14px;background:var(--card2);border:1px solid var(--line);position:relative;opacity:.5}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--mut)}
+  .scenes{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;opacity:.55}
+  .pill.on{opacity:1;border-color:var(--lime);color:var(--lime)}
+
+  .overlay{display:flex;gap:10px;align-items:flex-start}
+  .overlay img{width:44px;height:44px;border-radius:12px;flex:none}
+  .bubble{background:#12081f;border:2px solid #8a3dff;border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.35}
+  .bubble .who{color:#c9a2ff;font-size:11px;font-weight:700;margin-bottom:2px}
+  .bubble .q{color:var(--mut);font-size:12px;margin-bottom:6px}
+  .bubble .a{font-weight:700}
+  .bubble .poll{color:var(--mut);font-size:11px;margin-top:6px}
+
+  /* menu de baixo */
+  nav{position:fixed;left:0;right:0;bottom:0;background:rgba(11,11,16,.94);backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);
+    padding:8px 12px calc(8px + var(--safe-bot));display:flex;gap:6px;z-index:5}
+  nav button{flex:1;background:transparent;color:var(--mut);display:flex;flex-direction:column;align-items:center;
+    gap:2px;padding:6px 4px;font-size:11px;font-weight:700;border-radius:12px}
+  nav button .ic{font-size:22px;line-height:1}
+  nav button.on{color:var(--lime);background:rgba(198,255,0,.08)}
+
+  section{display:none}
+  section.on{display:block}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .modal.on{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + var(--safe-bot));
+    max-height:92vh;overflow:auto;border-top:2px solid var(--lime)}
+  .sheet h3{margin:0 0 12px;font-family:"Arial Black",Impact,sans-serif;font-style:italic;text-transform:uppercase}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px}
+  .check{display:flex;align-items:center;gap:10px;font-size:15px}
+  .check input{width:22px;height:22px;accent-color:var(--lime)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--safe-bot));background:var(--lime);
+    color:#0b0b10;font-weight:700;border-radius:12px;padding:10px 16px;font-size:14px;z-index:30;display:none;max-width:90%}
+  .toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icon.svg" alt="Nitro">
+    <div>
+      <div class="brand">Nitro</div>
+      <div class="hello" id="hello">&nbsp;</div>
+    </div>
+  </header>
+
+  <!-- ===================== CONTAS ===================== -->
+  <section id="tab-contas" class="on">
+    <div class="alert" id="alert"></div>
+
+    <div class="stats">
+      <div class="stat or"><div class="l">A pagar até o fim do mês</div><div class="n" id="s-mes">R$ 0</div><div class="s" id="s-mes2">&nbsp;</div></div>
+      <div class="stat lime"><div class="l">Próximos 7 dias</div><div class="n" id="s-7">R$ 0</div><div class="s" id="s-72">&nbsp;</div></div>
+      <div class="stat red"><div class="l">Vencidas</div><div class="n" id="s-v">R$ 0</div><div class="s" id="s-v2">&nbsp;</div></div>
+    </div>
+
+    <h2>Lançamento rápido</h2>
+    <div class="row">
+      <input type="text" id="quick" placeholder="Luz 303,75 vencimento 16/11" autocomplete="off" autocapitalize="sentences">
+      <button class="btn fit" id="quickBtn">Lançar</button>
+    </div>
+    <div class="hint">Escreva do seu jeito: nome, valor e data (dia/mês). Adicione "mensal" se a conta se repete todo mês.</div>
+
+    <div class="seg" id="filters">
+      <button data-f="abertas" class="on">Abertas</button>
+      <button data-f="pagas">Pagas</button>
+      <button data-f="todas">Todas</button>
+    </div>
+
+    <div id="list"></div>
+
+    <div class="row" style="margin-top:6px">
+      <button class="btn alt" id="newBtn">+ Conta detalhada</button>
+    </div>
+
+    <h2>Backup</h2>
+    <div class="row">
+      <button class="btn alt" id="expBtn">Exportar</button>
+      <button class="btn alt" id="impBtn">Importar</button>
+    </div>
+    <div class="hint">Por enquanto os dados ficam só neste aparelho. Exporte de vez em quando para guardar uma cópia, ou para levar as contas do iPad para o iPhone.</div>
+    <input type="file" id="impFile" accept="application/json,.json" style="display:none">
+  </section>
+
+  <!-- ===================== CASA ===================== -->
+  <section id="tab-casa">
+    <h2>Luzes <span class="tag soon">em breve</span></h2>
+    <div class="card">
+      <div class="light"><span>💡 Sala</span><span class="sw"></span></div>
+      <div class="light"><span>💡 Quarto</span><span class="sw"></span></div>
+      <div class="light"><span>💡 Cozinha</span><span class="sw"></span></div>
+      <div class="light"><span>💡 Escritório</span><span class="sw"></span></div>
+      <div class="hint">Vai controlar os interruptores Ekaza. Os nomes aqui são só um desenho: depois a gente liga com os seus.</div>
+    </div>
+
+    <h2>Cenas <span class="tag soon">em breve</span></h2>
+    <div class="card">
+      <div class="scenes">
+        <span class="pill">🎮 Modo live</span>
+        <span class="pill">🌙 Boa noite</span>
+        <span class="pill">🏠 Cheguei</span>
+        <span class="pill">🔌 Desligar tudo</span>
+      </div>
+    </div>
+
+    <h2>Rota no Waze <span class="tag">beta</span></h2>
+    <div class="card">
+      <div class="row">
+        <input type="search" id="dest" placeholder="Ex.: posto de gasolina, Autódromo de Interlagos" autocomplete="off">
+        <button class="btn fit" id="wazeBtn">Ir</button>
+      </div>
+      <div class="hint">Abre o Waze já com o destino pesquisado. Se o Waze não abrir, toque de novo ou confira se ele está instalado.</div>
+    </div>
+  </section>
+
+  <!-- ===================== LIVE ===================== -->
+  <section id="tab-live">
+    <h2>Status do Nitro <span class="tag soon">em breve</span></h2>
+    <div class="card">
+      <div class="scenes">
+        <span class="pill">Twitch</span>
+        <span class="pill">Kick</span>
+        <span class="pill">TikTok</span>
+        <span class="pill">YouTube</span>
+      </div>
+      <div class="hint">Aqui você vai ligar o Nitro em cada plataforma e ver se ele está de olho no chat.</div>
+    </div>
+
+    <h2>Como vai aparecer na live</h2>
+    <div class="card">
+      <div class="overlay">
+        <img src="icon.svg" alt="">
+        <div class="bubble">
+          <div class="who">@espectador</div>
+          <div class="q">"Nitro, qual agente joga bem no Ascent?"</div>
+          <div class="a">Pra Ascent eu iria de Jett ou Omen. Dá pra jogar agressivo no meio e pegar o controle da rotação.</div>
+          <div class="poll">Última enquete: exemplo 48%</div>
+        </div>
+      </div>
+      <div class="hint">É só um exemplo do visual. O texto e as cores a gente ajusta com o estilo do seu canal.</div>
+    </div>
+
+    <h2>Controles <span class="tag soon">em breve</span></h2>
+    <div class="card">
+      <div class="field"><label>Especialista no jogo</label>
+        <select disabled><option>Valorant</option><option>Fórmula 1</option></select></div>
+      <div class="field"><label>Criar enquete</label>
+        <input type="text" placeholder="Qual mapa vamos jogar?" disabled></div>
+      <button class="btn" disabled>Iniciar live</button>
+    </div>
+  </section>
+</div>
+
+<nav>
+  <button data-t="contas" class="on"><span class="ic">💸</span>Contas</button>
+  <button data-t="casa"><span class="ic">💡</span>Casa</button>
+  <button data-t="live"><span class="ic">🎮</span>Live</button>
+</nav>
+
+<!-- modal de conta -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h3 id="mTitle">Nova conta</h3>
+    <div class="field"><label>Nome</label><input type="text" id="fNome" placeholder="Ex.: Internet"></div>
+    <div class="row">
+      <div class="field"><label>Valor (R$)</label><input type="text" id="fValor" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label>Vencimento</label><input type="date" id="fVenc"></div>
+    </div>
+    <div class="field"><label>Categoria</label>
+      <select id="fCat">
+        <option value="moradia">🏠 Moradia</option>
+        <option value="energia">💡 Luz, água e gás</option>
+        <option value="internet">📶 Internet e celular</option>
+        <option value="cartao">💳 Cartão</option>
+        <option value="carro">🚗 Carro e transporte</option>
+        <option value="saude">❤️ Saúde</option>
+        <option value="assin">📺 Assinaturas</option>
+        <option value="outros" selected>📌 Outros</option>
+      </select>
+    </div>
+    <div class="field"><label class="check"><input type="checkbox" id="fRec"> Repete todo mês</label></div>
+    <div class="field"><label>Observação</label><input type="text" id="fObs" placeholder="Opcional"></div>
+    <div class="row">
+      <button class="btn alt" id="mCancel">Cancelar</button>
+      <button class="btn" id="mSave">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var KEY = 'nitro.contas.v1';
+  var CATS = {moradia:'🏠',energia:'💡',internet:'📶',cartao:'💳',carro:'🚗',saude:'❤️',assin:'📺',outros:'📌'};
+  var bills = [];
+  var filter = 'abertas';
+  var editingId = null;
+
+  /* ---------- armazenamento ---------- */
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      bills = raw ? JSON.parse(raw) : [];
+      if(!Array.isArray(bills)) bills = [];
+    }catch(e){ bills = []; }
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(bills)); }
+    catch(e){ toast('Não consegui salvar neste aparelho'); }
+  }
+
+  /* ---------- datas e dinheiro ---------- */
+  function pad(n){ return (n<10?'0':'')+n; }
+  function iso(y,m,d){ return y+'-'+pad(m)+'-'+pad(d); }
+  function todayISO(){ var d=new Date(); return iso(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+  function toDate(s){ var p=s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function daysUntil(s){ return Math.round((toDate(s)-toDate(todayISO()))/86400000); }
+  function fmtDate(s){ var p=s.split('-'); return p[2]+'/'+p[1]; }
+  function fmtMoney(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+  function validDate(y,m,d){ return m>=1 && m<=12 && d>=1 && d<=daysInMonth(y,m); }
+  function nextMonthISO(s){
+    var p=s.split('-'), y=+p[0], m=+p[1], d=+p[2];
+    m++; if(m>12){ m=1; y++; }
+    d=Math.min(d, daysInMonth(y,m));
+    return iso(y,m,d);
+  }
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  function toNum(s){
+    s=String(s).replace(/R\$\s*/i,'').trim();
+    if(s.indexOf(',')>-1) s=s.replace(/\./g,'').replace(',','.');
+    else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+    var n=parseFloat(s);
+    return isNaN(n)?null:n;
+  }
+
+  /* ---------- lançamento rápido ---------- */
+  function parseQuick(text){
+    var t=String(text||'').trim();
+    if(!t) return {error:'Escreva algo, por exemplo: Luz 303,75 vencimento 16/11'};
+    var rec=false;
+    if(/\b(mensal|todo\s+m[eê]s|recorrente)\b/i.test(t)){ rec=true; t=t.replace(/\b(mensal|todo\s+m[eê]s|recorrente)\b/ig,' '); }
+
+    var venc=null;
+    var dm=t.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+    if(dm){
+      var d=+dm[1], m=+dm[2], y=dm[3]?+dm[3]:null;
+      if(y!==null && y<100) y+=2000;
+      var now=new Date();
+      var explicitYear = y!==null;
+      if(y===null) y=now.getFullYear();
+      if(!validDate(y,m,d)) return {error:'Essa data não existe. Use dia/mês, por exemplo 16/11.'};
+      venc=iso(y,m,d);
+      if(!explicitYear && daysUntil(venc) < -30){ venc=iso(y+1,m,d); }
+      t=t.replace(dm[0],' ');
+    } else {
+      return {error:'Faltou a data de vencimento (ex.: 16/11).'};
+    }
+
+    var vm=t.match(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)/i);
+    var valor=0;
+    if(vm){
+      var n=toNum(vm[0]);
+      if(n!==null) valor=n;
+      t=t.replace(vm[0],' ');
+    } else {
+      return {error:'Faltou o valor (ex.: 303,75).'};
+    }
+
+    var nome=t.replace(/\b(vencimento|vencem|vence|venc|dia|r\$|reais|de|no|em)\b/ig,' ').replace(/[,:;\-–]+/g,' ').replace(/\s+/g,' ').trim();
+    if(!nome) nome='Conta';
+    nome=nome.charAt(0).toUpperCase()+nome.slice(1);
+    return {bill:{id:uid(),nome:nome,valor:valor,venc:venc,cat:guessCat(nome),rec:rec,obs:'',pago:false,pagoEm:null}};
+  }
+  function guessCat(n){
+    n=n.toLowerCase();
+    if(/luz|energia|água|agua|gás|gas|enel|sabesp|comg/.test(n)) return 'energia';
+    if(/internet|celular|vivo|claro|tim|oi\b|fibra|wifi/.test(n)) return 'internet';
+    if(/cart[aã]o|nubank|fatura|inter\b/.test(n)) return 'cartao';
+    if(/aluguel|condom[ií]nio|iptu|financiamento/.test(n)) return 'moradia';
+    if(/carro|ipva|seguro|combust|gasolina|moto|parcela/.test(n)) return 'carro';
+    if(/plano de sa[uú]de|m[eé]dico|farm[aá]cia|rem[eé]dio|dent/.test(n)) return 'saude';
+    if(/netflix|spotify|youtube|prime|disney|hbo|assinatura|twitch/.test(n)) return 'assin';
+    return 'outros';
+  }
+
+  /* ---------- status de cada conta ---------- */
+  function status(b){
+    if(b.pago) return {cls:'paid', txt:'Paga em '+(b.pagoEm?fmtDate(b.pagoEm):'—')};
+    var d=daysUntil(b.venc);
+    if(d<0)  return {cls:'over', txt:'Vencida há '+(-d)+(d===-1?' dia':' dias')};
+    if(d===0) return {cls:'today',txt:'Vence hoje'};
+    if(d===1) return {cls:'soon', txt:'Vence amanhã'};
+    if(d<=7)  return {cls:'soon', txt:'Vence em '+d+' dias'};
+    return {cls:'', txt:'Vence em '+d+' dias'};
+  }
+
+  /* ---------- tela ---------- */
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  function render(){
+    renderHello();
+    renderStats();
+    renderList();
+  }
+  function renderHello(){
+    var h=new Date().getHours();
+    $('hello').textContent = (h<12?'Bom dia':h<18?'Boa tarde':'Boa noite')+'! Tudo pronto pra acelerar.';
+  }
+  function renderStats(){
+    var open=bills.filter(function(b){return !b.pago;});
+    var now=new Date(), y=now.getFullYear(), m=now.getMonth()+1;
+    var endMonth=iso(y,m,daysInMonth(y,m));
+    var mes=open.filter(function(b){return b.venc<=endMonth;});
+    var sem=open.filter(function(b){var d=daysUntil(b.venc);return d>=0&&d<=7;});
+    var ven=open.filter(function(b){return daysUntil(b.venc)<0;});
+    function sum(a){return a.reduce(function(s,b){return s+(+b.valor||0);},0);}
+    function cnt(a){return a.length+(a.length===1?' conta':' contas');}
+    $('s-mes').textContent=fmtMoney(sum(mes)); $('s-mes2').textContent=cnt(mes);
+    $('s-7').textContent=fmtMoney(sum(sem));   $('s-72').textContent=cnt(sem);
+    $('s-v').textContent=fmtMoney(sum(ven));   $('s-v2').textContent=cnt(ven);
+
+    var a=$('alert');
+    var hoje=open.filter(function(b){return daysUntil(b.venc)===0;});
+    var tres=open.filter(function(b){var d=daysUntil(b.venc);return d>0&&d<=3;});
+    if(ven.length){ a.className='alert bad'; a.textContent='⚠️ '+ven.length+(ven.length===1?' conta vencida':' contas vencidas')+', no total de '+fmtMoney(sum(ven))+'. Bora resolver!'; }
+    else if(hoje.length){ a.className='alert warn'; a.textContent='🔔 Hoje vence: '+hoje.map(function(b){return b.nome;}).join(', ')+'.'; }
+    else if(tres.length){ a.className='alert warn'; a.textContent='⏳ Nos próximos 3 dias: '+tres.map(function(b){return b.nome+' ('+fmtDate(b.venc)+')';}).join(', ')+'.'; }
+    else if(open.length){ a.className='alert ok'; a.textContent='✅ Nada vencendo agora. A próxima é '+open.slice().sort(function(x,z){return x.venc<z.venc?-1:1;})[0].nome+'.'; }
+    else { a.className='alert ok'; a.textContent='✅ Nenhuma conta em aberto. Lance a primeira aqui embaixo.'; }
+  }
+  function renderList(){
+    var items=bills.slice();
+    if(filter==='abertas') items=items.filter(function(b){return !b.pago;});
+    if(filter==='pagas')   items=items.filter(function(b){return b.pago;});
+    items.sort(function(a,b){
+      if(filter==='pagas') return (b.pagoEm||'')<(a.pagoEm||'')?-1:1;
+      if(a.pago!==b.pago) return a.pago?1:-1;
+      return a.venc<b.venc?-1:a.venc>b.venc?1:0;
+    });
+    var box=$('list');
+    if(!items.length){
+      box.innerHTML='<div class="empty">'+(filter==='pagas'?'Nenhuma conta paga ainda.':'Nada por aqui. Use o lançamento rápido acima.')+'</div>';
+      return;
+    }
+    box.innerHTML=items.map(function(b){
+      var st=status(b);
+      return '<div class="bill '+(b.pago?'paid':(st.cls==='over'?'over':st.cls==='today'?'today':st.cls==='soon'?'soon':''))+'" data-id="'+b.id+'">'+
+        '<div class="top"><div><div class="nm">'+(CATS[b.cat]||'📌')+' '+esc(b.nome)+'</div>'+
+        '<div class="meta">Vence '+fmtDate(b.venc)+(b.rec?' · todo mês':'')+(b.obs?' · '+esc(b.obs):'')+'</div></div>'+
+        '<div class="val">'+fmtMoney(b.valor)+'</div></div>'+
+        '<span class="chip '+st.cls+'">'+st.txt+'</span>'+
+        '<div class="acts">'+
+          (b.pago?'<button class="btn alt sm" data-a="undo">Desfazer</button>':'<button class="btn sm" data-a="pay">✓ Paguei</button>')+
+          '<button class="btn alt sm" data-a="edit">Editar</button>'+
+          '<button class="btn danger sm" data-a="del">Excluir</button>'+
+        '</div></div>';
+    }).join('');
+  }
+
+  /* ---------- ações ---------- */
+  function find(id){ for(var i=0;i<bills.length;i++) if(bills[i].id===id) return bills[i]; return null; }
+
+  function markPaid(b){
+    b.pago=true; b.pagoEm=todayISO();
+    if(b.rec){
+      var nv=nextMonthISO(b.venc);
+      var exists=bills.some(function(o){return o.nome===b.nome && o.venc===nv;});
+      if(!exists){
+        bills.push({id:uid(),nome:b.nome,valor:b.valor,venc:nv,cat:b.cat,rec:true,obs:b.obs,pago:false,pagoEm:null});
+        toast('Paga! Já criei a de '+fmtDate(nv)+'.');
+      } else toast('Conta marcada como paga.');
+    } else toast('Conta marcada como paga.');
+  }
+
+  $('list').addEventListener('click',function(e){
+    var btn=e.target.closest('button[data-a]'); if(!btn) return;
+    var card=btn.closest('.bill'); var b=find(card.getAttribute('data-id')); if(!b) return;
+    var a=btn.getAttribute('data-a');
+    if(a==='pay'){ markPaid(b); }
+    else if(a==='undo'){ b.pago=false; b.pagoEm=null; }
+    else if(a==='edit'){ openModal(b); return; }
+    else if(a==='del'){ if(!confirm('Excluir "'+b.nome+'"?')) return; bills=bills.filter(function(x){return x.id!==b.id;}); }
+    save(); render();
+  });
+
+  function quickAdd(){
+    var r=parseQuick($('quick').value);
+    if(r.error){ toast(r.error); return; }
+    bills.push(r.bill); save(); render();
+    $('quick').value='';
+    toast('Lançado: '+r.bill.nome+' · '+fmtMoney(r.bill.valor)+' · '+fmtDate(r.bill.venc));
+  }
+  $('quickBtn').addEventListener('click',quickAdd);
+  $('quick').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); quickAdd(); }});
+
+  $('filters').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-f]'); if(!b) return;
+    filter=b.getAttribute('data-f');
+    Array.prototype.forEach.call($('filters').children,function(x){ x.classList.toggle('on', x===b); });
+    renderList();
+  });
+
+  /* ---------- modal ---------- */
+  function openModal(b){
+    editingId=b?b.id:null;
+    $('mTitle').textContent=b?'Editar conta':'Nova conta';
+    $('fNome').value=b?b.nome:'';
+    $('fValor').value=b?String(b.valor).replace('.',','):'';
+    $('fVenc').value=b?b.venc:todayISO();
+    $('fCat').value=b?b.cat:'outros';
+    $('fRec').checked=b?!!b.rec:false;
+    $('fObs').value=b?b.obs:'';
+    $('modal').classList.add('on');
+  }
+  function closeModal(){ $('modal').classList.remove('on'); editingId=null; }
+  $('newBtn').addEventListener('click',function(){ openModal(null); });
+  $('mCancel').addEventListener('click',closeModal);
+  $('modal').addEventListener('click',function(e){ if(e.target===$('modal')) closeModal(); });
+  $('mSave').addEventListener('click',function(){
+    var nome=$('fNome').value.trim();
+    var valor=toNum($('fValor').value||'0');
+    var venc=$('fVenc').value;
+    if(!nome){ toast('Dê um nome para a conta'); return; }
+    if(valor===null){ toast('Valor inválido'); return; }
+    if(!venc){ toast('Escolha o vencimento'); return; }
+    var data={nome:nome,valor:valor,venc:venc,cat:$('fCat').value,rec:$('fRec').checked,obs:$('fObs').value.trim()};
+    if(editingId){
+      var b=find(editingId); if(b){ for(var k in data) b[k]=data[k]; }
+    } else {
+      data.id=uid(); data.pago=false; data.pagoEm=null; bills.push(data);
+    }
+    save(); closeModal(); render(); toast('Conta salva');
+  });
+
+  /* ---------- backup ---------- */
+  $('expBtn').addEventListener('click',function(){
+    var text=JSON.stringify({app:'nitro',version:1,exportedAt:new Date().toISOString(),bills:bills},null,2);
+    var name='nitro-contas-'+todayISO()+'.json';
+    try{
+      var file=new File([text],name,{type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'Backup do Nitro'}).catch(function(){});
+        return;
+      }
+    }catch(e){}
+    try{
+      var url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+      var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1000);
+    }catch(e){ toast('Não consegui exportar'); }
+  });
+  $('impBtn').addEventListener('click',function(){ $('impFile').click(); });
+  $('impFile').addEventListener('change',function(){
+    var f=this.files&&this.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var j=JSON.parse(r.result);
+        var arr=Array.isArray(j)?j:(j&&j.bills);
+        if(!Array.isArray(arr)) throw new Error('formato');
+        var add=0;
+        arr.forEach(function(x){
+          if(x && x.nome && x.venc && /^\d{4}-\d{2}-\d{2}$/.test(x.venc) && !find(x.id)){
+            bills.push({id:x.id||uid(),nome:String(x.nome),valor:+x.valor||0,venc:x.venc,cat:CATS[x.cat]?x.cat:'outros',rec:!!x.rec,obs:x.obs?String(x.obs):'',pago:!!x.pago,pagoEm:x.pagoEm||null});
+            add++;
+          }
+        });
+        save(); render(); toast(add+(add===1?' conta importada':' contas importadas'));
+      }catch(e){ toast('Arquivo inválido'); }
+    };
+    r.readAsText(f); this.value='';
+  });
+
+  /* ---------- Waze ---------- */
+  $('wazeBtn').addEventListener('click',function(){
+    var q=$('dest').value.trim();
+    if(!q){ toast('Digite para onde você quer ir'); return; }
+    window.location.href='https://waze.com/ul?q='+encodeURIComponent(q)+'&navigate=yes';
+  });
+  $('dest').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('wazeBtn').click(); }});
+
+  /* ---------- abas ---------- */
+  document.querySelector('nav').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-t]'); if(!b) return;
+    var t=b.getAttribute('data-t');
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'),function(x){ x.classList.toggle('on',x===b); });
+    Array.prototype.forEach.call(document.querySelectorAll('section'),function(s){ s.classList.toggle('on',s.id==='tab-'+t); });
+    window.scrollTo(0,0);
+  });
+
+  /* ---------- aviso rápido ---------- */
+  var tt=null;
+  function toast(msg){
+    var el=$('toast'); el.textContent=msg; el.classList.add('on');
+    clearTimeout(tt); tt=setTimeout(function(){ el.classList.remove('on'); },2600);
+  }
+
+  /* ---------- início ---------- */
+  load(); render();
+  if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
