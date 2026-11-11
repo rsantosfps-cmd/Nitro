@@ -122,6 +122,12 @@
   nav button .ic{font-size:22px;line-height:1}
   nav button.on{color:var(--lime);background:rgba(198,255,0,.08)}
 
+  input[type=password]{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;
+    padding:12px;font-size:16px;color:var(--text);outline:none}
+  input[type=password]:focus{border-color:var(--lime)}
+  .syncchip{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--mut);
+    border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+
   section{display:none}
   section.on{display:block}
 
@@ -148,6 +154,7 @@
       <div class="brand">Nitro</div>
       <div class="hello" id="hello">&nbsp;</div>
     </div>
+    <button class="syncchip" id="sync" type="button">💾 Só neste aparelho</button>
   </header>
 
   <!-- ===================== CONTAS ===================== -->
@@ -293,6 +300,26 @@
   </div>
 </div>
 
+<!-- modal de login -->
+<div class="modal" id="authModal">
+  <div class="sheet">
+    <h3>Entrar no Nitro</h3>
+    <div class="hint" style="margin:0 0 12px">Use o mesmo e-mail e senha no iPad e no iPhone para ver as mesmas contas. Primeira vez? Toque em "Criar conta".</div>
+    <div class="field"><label>E-mail</label>
+      <input type="text" id="aEmail" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="voce@email.com"></div>
+    <div class="field"><label>Senha</label>
+      <input type="password" id="aPass" autocomplete="current-password" placeholder="mínimo 6 caracteres"></div>
+    <div class="hint" id="aErr" style="color:var(--orange);min-height:18px;margin:0 0 10px"></div>
+    <div class="row">
+      <button class="btn alt" id="aCreate" type="button">Criar conta</button>
+      <button class="btn" id="aLogin" type="button">Entrar</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn alt" id="aSkip" type="button">Agora não</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -306,16 +333,82 @@
   var editingId = null;
 
   /* ---------- armazenamento ---------- */
-  function load(){
+  var cloud = {cfg:null, ready:false, failed:false, uid:null, pending:false};
+  var cloudMap = {};   // id -> assinatura do que a nuvem já tem
+  var fb = null, auth = null, db = null, unsub = null, askedLogin = false;
+
+  function readLocal(){
     try{
       var raw = localStorage.getItem(KEY);
-      bills = raw ? JSON.parse(raw) : [];
-      if(!Array.isArray(bills)) bills = [];
-    }catch(e){ bills = []; }
+      var a = raw ? JSON.parse(raw) : [];
+      return Array.isArray(a) ? a : [];
+    }catch(e){ return []; }
   }
-  function save(){
+  function writeLocal(){
     try{ localStorage.setItem(KEY, JSON.stringify(bills)); }
     catch(e){ toast('Não consegui salvar neste aparelho'); }
+  }
+  function load(){ bills = readLocal(); }
+  function save(){
+    writeLocal();
+    if(cloud.ready && cloud.uid) pushDiff();
+  }
+
+  /* ---------- sincronização (Firebase) ---------- */
+  function clean(b){
+    return {nome:String(b.nome||''), valor:+b.valor||0, venc:String(b.venc||''), cat:CATS[b.cat]?b.cat:'outros',
+            rec:!!b.rec, obs:b.obs?String(b.obs):'', pago:!!b.pago, pagoEm:b.pagoEm||null};
+  }
+  function sig(b){ return JSON.stringify(clean(b)); }
+  function fromDoc(id, d){
+    if(!d || !d.nome || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.venc||''))) return null;
+    var b = clean(d); b.id = id; return b;
+  }
+  function pushDiff(){
+    var seen = {};
+    bills.forEach(function(b){
+      seen[b.id] = 1;
+      var s = sig(b);
+      if(cloudMap[b.id] !== s){
+        cloudMap[b.id] = s;
+        fb.fs.setDoc(fb.fs.doc(db,'users',cloud.uid,'contas',b.id), clean(b))
+          .catch(function(e){ toast('Erro ao enviar para a nuvem'); console.error(e); });
+      }
+    });
+    Object.keys(cloudMap).forEach(function(id){
+      if(!seen[id]){
+        delete cloudMap[id];
+        fb.fs.deleteDoc(fb.fs.doc(db,'users',cloud.uid,'contas',id))
+          .catch(function(e){ toast('Erro ao apagar na nuvem'); console.error(e); });
+      }
+    });
+  }
+  function startSync(uid){
+    var seed = bills.slice();                 // o que já existia neste aparelho
+    var mergedKey = 'nitro.merged.'+uid;
+    var col = fb.fs.collection(db,'users',uid,'contas');
+    unsub = fb.fs.onSnapshot(col,{includeMetadataChanges:true},function(snap){
+      var arr = [], map = {};
+      snap.forEach(function(d){
+        var b = fromDoc(d.id, d.data());
+        if(b){ arr.push(b); map[b.id] = sig(b); }
+      });
+      bills = arr; cloudMap = map;
+      cloud.pending = snap.metadata.hasPendingWrites;
+      var doMerge = false;
+      if(!snap.metadata.fromCache){
+        try{ doMerge = !localStorage.getItem(mergedKey); }catch(e){}
+        if(doMerge){
+          seed.forEach(function(s){ if(s && s.id && !map[s.id]) bills.push(s); });
+          try{ localStorage.setItem(mergedKey,'1'); }catch(e){}
+        }
+      }
+      writeLocal();
+      if(doMerge) pushDiff();
+      render(); setChip();
+    },function(err){
+      toast('Erro na sincronização: '+((err&&err.code)||'desconhecido'));
+    });
   }
 
   /* ---------- datas e dinheiro ---------- */
@@ -607,8 +700,98 @@
     clearTimeout(tt); tt=setTimeout(function(){ el.classList.remove('on'); },2600);
   }
 
+  /* ---------- conta e login ---------- */
+  function setChip(){
+    var t;
+    if(!cloud.cfg) t = '💾 Só neste aparelho';
+    else if(cloud.failed) t = '📴 Sem nuvem';
+    else if(!cloud.ready) t = '⏳ Conectando…';
+    else if(!cloud.uid) t = '🔒 Entrar';
+    else if(!navigator.onLine) t = '📴 Offline';
+    else if(cloud.pending) t = '☁️ Enviando…';
+    else t = '☁️ Sincronizado';
+    $('sync').textContent = t;
+  }
+  function openAuth(){ $('aErr').textContent = ''; $('authModal').classList.add('on'); }
+  function closeAuth(){ $('authModal').classList.remove('on'); $('aPass').value = ''; }
+  function authMsg(e){
+    var c = (e && e.code) || '';
+    if(c==='auth/invalid-credential' || c==='auth/wrong-password' || c==='auth/user-not-found') return 'E-mail ou senha incorretos.';
+    if(c==='auth/email-already-in-use') return 'Esse e-mail já tem conta. Toque em Entrar.';
+    if(c==='auth/weak-password') return 'Senha fraca: use pelo menos 6 caracteres.';
+    if(c==='auth/invalid-email') return 'E-mail inválido.';
+    if(c==='auth/network-request-failed') return 'Sem internet no momento.';
+    if(c==='auth/operation-not-allowed') return 'Ative "E-mail/senha" em Authentication no Firebase.';
+    if(c==='auth/too-many-requests') return 'Muitas tentativas. Espere um pouco.';
+    return 'Não deu certo ('+(c||'erro')+').';
+  }
+  function doAuth(create){
+    if(!cloud.ready){ $('aErr').textContent = 'Ainda conectando. Tente de novo em instantes.'; return; }
+    var em = $('aEmail').value.trim(), pw = $('aPass').value;
+    if(!em || !pw){ $('aErr').textContent = 'Preencha e-mail e senha.'; return; }
+    $('aErr').textContent = 'Aguarde…';
+    var p = create ? fb.auth.createUserWithEmailAndPassword(auth, em, pw)
+                   : fb.auth.signInWithEmailAndPassword(auth, em, pw);
+    p.then(function(){ $('aErr').textContent = ''; })
+     .catch(function(e){ $('aErr').textContent = authMsg(e); });
+  }
+  $('aLogin').addEventListener('click', function(){ doAuth(false); });
+  $('aCreate').addEventListener('click', function(){ doAuth(true); });
+  $('aSkip').addEventListener('click', closeAuth);
+  $('aPass').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); doAuth(false); }});
+
+  $('sync').addEventListener('click', function(){
+    if(!cloud.cfg){ toast('A sincronização ainda não foi configurada'); return; }
+    if(cloud.failed){ toast('Sem conexão com a nuvem agora'); return; }
+    if(!cloud.ready){ toast('Conectando…'); return; }
+    if(cloud.uid){
+      if(confirm('Sair da conta? Seus dados continuam salvos na nuvem, mas saem deste aparelho.')){
+        fb.auth.signOut(auth).then(function(){
+          bills = []; try{ localStorage.removeItem(KEY); }catch(e){}
+          render();
+        });
+      }
+    } else openAuth();
+  });
+  window.addEventListener('online', setChip);
+  window.addEventListener('offline', setChip);
+
+  function onAuth(user){
+    if(unsub){ unsub(); unsub = null; }
+    cloudMap = {}; cloud.pending = false;
+    if(user){ cloud.uid = user.uid; closeAuth(); startSync(user.uid); }
+    else { cloud.uid = null; if(!askedLogin){ askedLogin = true; openAuth(); } }
+    setChip();
+  }
+
+  function bootCloud(){
+    import('./firebase-config.js').then(function(m){
+      var cfg = m && m.firebaseConfig;
+      if(!cfg || !cfg.apiKey || String(cfg.apiKey).indexOf('COLE')===0) throw new Error('sem-config');
+      cloud.cfg = cfg; setChip();
+      var V = 'https://www.gstatic.com/firebasejs/10.14.1/';
+      return Promise.all([import(V+'firebase-app.js'), import(V+'firebase-auth.js'), import(V+'firebase-firestore.js')]);
+    }).then(function(mods){
+      var app = mods[0].initializeApp(cloud.cfg);
+      fb = {auth:mods[1], fs:mods[2]};
+      auth = fb.auth.getAuth(app);
+      try{
+        db = fb.fs.initializeFirestore(app,{
+          localCache: fb.fs.persistentLocalCache({tabManager: fb.fs.persistentMultipleTabManager()}),
+          experimentalAutoDetectLongPolling: true
+        });
+      }catch(e){ db = fb.fs.getFirestore(app); }
+      cloud.ready = true;
+      fb.auth.onAuthStateChanged(auth, onAuth);
+    }).catch(function(e){
+      if(!(e && e.message === 'sem-config') && cloud.cfg){ cloud.failed = true; }
+      setChip();
+    });
+  }
+
   /* ---------- início ---------- */
-  load(); render();
+  load(); render(); setChip();
+  bootCloud();
   if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     navigator.serviceWorker.register('sw.js').catch(function(){});
   }
