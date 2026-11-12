@@ -128,6 +128,22 @@
   .syncchip{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--mut);
     border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;white-space:nowrap}
 
+  /* conversa com o Nitro */
+  .chat{display:flex;flex-direction:column;gap:8px;padding:6px 0 10px;min-height:40vh}
+  .msg{max-width:86%;padding:10px 12px;border-radius:16px;font-size:15px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  .msg.me{align-self:flex-end;background:var(--lime);color:#0b0b10;border-bottom-right-radius:4px;font-weight:600}
+  .msg.nitro{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.typing{opacity:.6;font-style:italic}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
+  .chips button{background:var(--card2);border:1px solid var(--line);color:var(--text);border-radius:999px;
+    padding:8px 12px;font-size:13px;font-weight:600}
+  .composer{position:sticky;bottom:calc(74px + var(--safe-bot));display:flex;gap:8px;padding:10px 0;
+    background:linear-gradient(to top,var(--bg) 70%,rgba(11,11,16,0))}
+  .composer input{flex:1}
+  .composer .btn{padding:12px 14px}
+  #micBtn.rec{background:var(--red);color:#fff;border-color:var(--red)}
+  .tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+
   section{display:none}
   section.on{display:block}
 
@@ -262,10 +278,42 @@
       <button class="btn" disabled>Iniciar live</button>
     </div>
   </section>
+
+  <!-- ===================== NITRO (conversa) ===================== -->
+  <section id="tab-nitro">
+    <div class="card" id="cfgCard" style="display:none;margin-top:10px">
+      <div class="field" style="margin-bottom:8px"><label>Endereço do cérebro do Nitro (Cloudflare)</label>
+        <input type="text" id="apiIn" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://nitro-brain.seu-nome.workers.dev"></div>
+      <div class="row"><button class="btn" id="apiSave" type="button">Salvar</button></div>
+      <div class="hint">Você só cola isso uma vez: ele fica salvo na sua conta e vale no iPad e no iPhone.</div>
+    </div>
+
+    <div class="chat" id="chat"></div>
+
+    <div class="chips" id="chips">
+      <button type="button" data-q="O que vence essa semana?">📅 O que vence essa semana?</button>
+      <button type="button" data-q="Quando foi o falecimento do Silvio Santos?">🔎 Pergunta de exemplo</button>
+    </div>
+
+    <div class="composer">
+      <button class="btn alt fit" id="micBtn" type="button" aria-label="Falar">🎤</button>
+      <input type="text" id="chatIn" placeholder="Fale com o Nitro…" enterkeyhint="send" autocomplete="off">
+      <button class="btn fit" id="sendBtn" type="button">Enviar</button>
+    </div>
+
+    <div class="tools">
+      <label class="check" style="font-size:13px;color:var(--mut)"><input type="checkbox" id="speakOn"> Nitro fala as respostas</label>
+      <span>
+        <button class="btn alt sm" id="cfgBtn" type="button">Cérebro</button>
+        <button class="btn alt sm" id="clearChat" type="button">Limpar</button>
+      </span>
+    </div>
+  </section>
 </div>
 
 <nav>
   <button data-t="contas" class="on"><span class="ic">💸</span>Contas</button>
+  <button data-t="nitro"><span class="ic">💬</span>Nitro</button>
   <button data-t="casa"><span class="ic">💡</span>Casa</button>
   <button data-t="live"><span class="ic">🎮</span>Live</button>
 </nav>
@@ -759,7 +807,7 @@
   function onAuth(user){
     if(unsub){ unsub(); unsub = null; }
     cloudMap = {}; cloud.pending = false;
-    if(user){ cloud.uid = user.uid; closeAuth(); startSync(user.uid); }
+    if(user){ cloud.uid = user.uid; closeAuth(); startSync(user.uid); loadRemoteConfig(user.uid); }
     else { cloud.uid = null; if(!askedLogin){ askedLogin = true; openAuth(); } }
     setChip();
   }
@@ -789,8 +837,137 @@
     });
   }
 
+  /* ---------- conversa com o Nitro ---------- */
+  var CHAT_KEY = 'nitro.chat.v1', API_KEY = 'nitro.api.v1', SPEAK_KEY = 'nitro.speak.v1';
+  var chat = [], apiUrl = '', busy = false;
+
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+  function loadChat(){
+    try{ var a = JSON.parse(lsGet(CHAT_KEY)||'[]'); chat = Array.isArray(a) ? a.slice(-40) : []; }catch(e){ chat = []; }
+    apiUrl = lsGet(API_KEY) || '';
+    $('speakOn').checked = lsGet(SPEAK_KEY) === '1';
+  }
+  function saveChat(){ lsSet(CHAT_KEY, JSON.stringify(chat.slice(-40))); }
+
+  function renderChat(typing){
+    var box = $('chat'); box.innerHTML = '';
+    if(!chat.length){
+      var d = document.createElement('div'); d.className = 'msg nitro';
+      d.textContent = 'E aí! Eu sou o Nitro. Pode me perguntar qualquer coisa ou pedir pra conferir suas contas. É só digitar ou tocar no 🎤.';
+      box.appendChild(d);
+    }
+    chat.forEach(function(m){
+      var d = document.createElement('div'); d.className = 'msg ' + (m.role==='me'?'me':'nitro');
+      d.textContent = m.text; box.appendChild(d);
+    });
+    if(typing){
+      var t = document.createElement('div'); t.className = 'msg nitro typing'; t.textContent = 'Nitro está pensando…';
+      box.appendChild(t);
+    }
+    if($('tab-nitro').classList.contains('on')) window.scrollTo(0, document.body.scrollHeight);
+  }
+  function addMsg(role, text){ chat.push({role:role, text:String(text)}); saveChat(); renderChat(false); }
+
+  function showCfg(on){ $('cfgCard').style.display = on ? 'block' : 'none'; if(on){ $('apiIn').value = apiUrl; } }
+
+  function loadRemoteConfig(uid){
+    try{
+      fb.fs.getDoc(fb.fs.doc(db,'users',uid,'config','app')).then(function(s){
+        if(s.exists() && s.data().apiUrl){
+          apiUrl = String(s.data().apiUrl); lsSet(API_KEY, apiUrl);
+          showCfg(false);
+        } else if(!apiUrl){ showCfg(true); }
+      }).catch(function(){});
+    }catch(e){}
+  }
+  $('apiSave').addEventListener('click', function(){
+    var v = $('apiIn').value.trim().replace(/\/+$/,'');
+    if(!/^https:\/\/[^\s]+$/.test(v)){ toast('Cole o endereço completo, começando com https://'); return; }
+    apiUrl = v; lsSet(API_KEY, v); showCfg(false);
+    if(cloud.ready && cloud.uid){
+      fb.fs.setDoc(fb.fs.doc(db,'users',cloud.uid,'config','app'), {apiUrl:v}).catch(function(){});
+    }
+    toast('Cérebro conectado. Pode conversar!');
+  });
+  $('cfgBtn').addEventListener('click', function(){ showCfg($('cfgCard').style.display === 'none'); });
+  $('clearChat').addEventListener('click', function(){
+    if(!chat.length || confirm('Limpar a conversa?')){ chat = []; saveChat(); renderChat(false); }
+  });
+
+  function billsContext(){
+    var open = bills.filter(function(b){ return !b.pago; }).sort(function(a,b){ return a.venc < b.venc ? -1 : 1; }).slice(0,20);
+    if(!open.length) return 'Nenhuma conta em aberto.';
+    return open.map(function(b){
+      var d = daysUntil(b.venc);
+      var st = d<0 ? 'vencida há '+(-d)+' dia(s)' : d===0 ? 'vence hoje' : 'vence em '+d+' dia(s)';
+      return '- '+b.nome+': '+fmtMoney(b.valor)+', vencimento '+fmtDate(b.venc)+' ('+st+')';
+    }).join('\n');
+  }
+
+  function speak(t){
+    if(!$('speakOn').checked || !('speechSynthesis' in window)) return;
+    try{
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g,''));
+      u.lang = 'pt-BR'; speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  $('speakOn').addEventListener('change', function(){ lsSet(SPEAK_KEY, this.checked ? '1' : '0'); });
+
+  function sendChat(text){
+    text = String(text||'').trim();
+    if(!text || busy) return;
+    if(!cloud.cfg){ addMsg('me', text); addMsg('nitro', 'A sincronização ainda não foi configurada, então não consigo falar com meu cérebro.'); return; }
+    if(!cloud.uid){ openAuth(); toast('Entre na sua conta primeiro'); return; }
+    if(!apiUrl){ showCfg(true); toast('Falta colar o endereço do cérebro'); return; }
+    var hist = chat.slice(-10).map(function(m){ return {role: m.role==='me'?'user':'model', text: m.text}; });
+    var ctx = /conta|pagar|pago|vence|vencid|boleto|fatura|d[ií]vida|luz|[áa]gua|internet|aluguel/i.test(text) ? billsContext() : '';
+    addMsg('me', text);
+    busy = true; renderChat(true);
+    auth.currentUser.getIdToken().then(function(tok){
+      return fetch(apiUrl, {method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+        body: JSON.stringify({mensagem:text, historico:hist, contexto:ctx})});
+    }).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        if(!r.ok) throw new Error(j.erro || ('Erro '+r.status));
+        return j;
+      });
+    }).then(function(j){
+      var ans = j.resposta || 'Não consegui responder agora.';
+      busy = false; addMsg('nitro', ans); speak(ans);
+    }).catch(function(e){
+      busy = false;
+      var m = (e && e.message) || '';
+      if(/Failed to fetch|Load failed|NetworkError/i.test(m)) m = 'Não consegui falar com o cérebro. Confira a internet e o endereço (botão Cérebro).';
+      addMsg('nitro', '⚠️ ' + m);
+    });
+  }
+  $('sendBtn').addEventListener('click', function(){ var v = $('chatIn').value; $('chatIn').value = ''; sendChat(v); });
+  $('chatIn').addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ e.preventDefault(); var v = this.value; this.value = ''; sendChat(v); }
+  });
+  $('chips').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-q]'); if(b) sendChat(b.getAttribute('data-q'));
+  });
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  $('micBtn').addEventListener('click', function(){
+    if(!SR){ toast('Use o microfone do teclado do iPhone (ditado)'); return; }
+    try{
+      var rec = new SR(); rec.lang = 'pt-BR'; rec.interimResults = false; rec.maxAlternatives = 1;
+      rec.onresult = function(e){ var t = e.results[0][0].transcript; sendChat(t); };
+      rec.onerror = function(e){ toast('Microfone indisponível ('+((e&&e.error)||'erro')+'). Tente o ditado do teclado.'); };
+      rec.onend = function(){ $('micBtn').classList.remove('rec'); };
+      rec.start(); $('micBtn').classList.add('rec');
+    }catch(e){ toast('Não consegui abrir o microfone'); }
+  });
+
   /* ---------- início ---------- */
-  load(); render(); setChip();
+  load(); loadChat(); renderChat(false); render(); setChip();
+  if(apiUrl) showCfg(false);
   bootCloud();
   if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     navigator.serviceWorker.register('sw.js').catch(function(){});
